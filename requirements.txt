@@ -1,5 +1,5 @@
-PyMuPDF==1.28.2
-sentence-transformers==6.1.0
+# Runtime dependencies for the retrieval server (server.py). This is the file
+# Vercel installs, so it must stay small: no PyTorch, no PyMuPDF.
 chromadb==1.5.9
 fastapi==0.141.1
 uvicorn==0.54.0

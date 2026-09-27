@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "python embedding.py",
+  "functions": {
+    "server.py": {
+      "excludeFiles": "{ui/**,results.json,README.md,build.sh,render.yaml,requirements-ingest.txt,**/*.pdf,models/**/*.tar.gz,**/__pycache__/**}"
+    }
+  }
+}

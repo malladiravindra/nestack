@@ -8,6 +8,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
-      # Keep the downloaded model inside the project so it ships from build to runtime.
-      - key: HF_HOME
-        value: /opt/render/project/src/.hf_cache

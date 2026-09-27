@@ -17,7 +17,14 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, StringConstraints
 
-from ingest import CHROMA_DIR, COLLECTION_NAME, EMBEDDING_MODEL_NAME, embed_texts, load_embedding_model
+from embedding import (
+    CHROMA_DIR,
+    COLLECTION_NAME,
+    EMBEDDING_MODEL_NAME,
+    embed_texts,
+    load_embedding_model,
+    open_chroma_client,
+)
 
 MAX_TOP_K = 20
 NOT_INGESTED_MESSAGE = (
@@ -82,7 +89,7 @@ def get_collection() -> chromadb.Collection:
     if not CHROMA_DIR.is_dir():
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, NOT_INGESTED_MESSAGE)
     if "client" not in _state:
-        _state["client"] = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        _state["client"] = open_chroma_client()
     try:
         collection = _state["client"].get_collection(COLLECTION_NAME)
     except (NotFoundError, ValueError):

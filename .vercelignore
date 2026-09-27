@@ -1,0 +1,10 @@
+# Used by `vercel deploy` from this folder. chroma_db/ is deliberately NOT
+# ignored: the API needs it, and it is not in Git.
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pdf
+models/
+.git/

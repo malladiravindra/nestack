@@ -29,7 +29,7 @@ PyMuPDF                 page-by-page text extraction (1-based page numbers kept)
  ↓
 75-character overlap    stride = 500 - 75 = 425
  ↓
-all-MiniLM-L6-v2        local sentence-transformers model, 384-dim, L2-normalised
+all-MiniLM-L6-v2        local model run with ONNX Runtime, 384-dim, L2-normalised
  ↓
 ChromaDB                persistent collection "pdf_chunks" in ./chroma_db (cosine space)
  ↓
@@ -42,19 +42,23 @@ POST /query             embed query → vector similarity search → [{chunk_tex
 
 ```text
 nestack-pdf-vectorization/
-├── ingest.py          PDF extraction + embeddings + ChromaDB ingestion (also holds shared config)
+├── ingest.py          PDF extraction + embeddings + ChromaDB ingestion
+├── embedding.py       shared config: embedding model, embed_texts(), ChromaDB path/collection
 ├── chunker.py         chunking only (chunk_page_text)
 ├── server.py          FastAPI app: query embedding + vector retrieval
-├── requirements.txt   pinned direct dependencies
+├── requirements.txt   pinned runtime dependencies (server; what Vercel installs)
+├── requirements-ingest.txt  runtime + PyMuPDF, for ingestion
+├── vercel.json        Vercel function config (build step, bundle exclusions)
 ├── README.md
 ├── results.json       raw API responses for 6 queries against the assessment PDF
 ├── ui/index.html      optional browser UI for POST /query (static, no build step)
 ├── .gitignore
-└── chroma_db/         created by ingest.py at runtime — not committed
+├── chroma_db/         created by ingest.py at runtime — not committed
+└── models/            ONNX model files, downloaded on first use — not committed
 ```
 
-`server.py` imports the model name, embedding function, database path and collection
-name from `ingest.py`, so documents and queries are always embedded with exactly the
+`ingest.py` and `server.py` both import the model name, embedding function, database
+path and collection name from `embedding.py`, so documents and queries are always embedded with exactly the
 same model and settings.
 
 ---
@@ -115,21 +119,26 @@ An A/B test on the assessment PDF with six queries improved the rank of the
 answer-bearing chunk for one query and left the other five unchanged. That gain was too
 small to justify departing from "extract all text", so the source text is kept as extracted.
 
-### Embedding model: `all-MiniLM-L6-v2` (sentence-transformers)
+### Embedding model: `all-MiniLM-L6-v2` (ONNX Runtime)
 
 - **Runs locally**: no API key, no network call per request, and no usage cost. The
-  model weights (87 MB) are downloaded once from Hugging Face on first run and then cached.
+  model files (~88 MB) are downloaded once on first run into `./models` and then reused.
 - **Lightweight**: 6 transformer layers and 384-dimensional vectors (the dimension is read
   from the generated embeddings and printed during ingestion). It runs on CPU, and no GPU is needed.
 - **Suitable semantic embeddings**: trained for sentence and short-paragraph similarity,
   which matches 500-character chunks and short natural-language queries.
-- **Reproducible**: a fixed, open model pinned through `sentence-transformers`, so anyone
-  can reproduce the same vectors from these instructions.
+- **Reproducible**: a fixed, open model. It runs through ChromaDB's built-in
+  `ONNXMiniLM_L6_V2` embedding function (ONNX Runtime; the model archive is SHA-256
+  verified on download), so anyone can reproduce the same vectors from these instructions.
+- **No PyTorch**: this is the same model, tokenizer, 256-token truncation, mean pooling and
+  L2 normalisation as the `sentence-transformers` version, without PyTorch (~715 MB
+  installed on Linux, plus several GB of CUDA libraries by default). Checked against
+  vectors produced by `sentence-transformers` 6.1.0: cosine similarity 1.0000000 for every
+  chunk, and identical top-3 results for all `results.json` queries (scores within 3e-7).
 - **Same model for documents and queries**: one symmetric model embeds both sides, so there are no
   separate query and document encoders to keep in sync.
 
-Embeddings are L2-normalised (`normalize_embeddings=True`) at both ingestion and
-query time.
+Embeddings are L2-normalised at both ingestion and query time.
 
 Alternatives such as OpenAI `text-embedding-3-small`, Cohere Embed or larger local models
 (e.g. `all-mpnet-base-v2`, BGE/E5) could give higher retrieval quality but add either an
@@ -192,7 +201,7 @@ Windows (PowerShell):
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r requirements.txt
+pip install -r requirements-ingest.txt
 ```
 
 Linux/macOS:
@@ -200,13 +209,13 @@ Linux/macOS:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-ingest.txt
 ```
 
-`sentence-transformers` installs PyTorch, which is a large download. On the first
-ingestion or server start, the embedding model is downloaded from Hugging Face and
-cached. After that, both run without network access. A message about unauthenticated
-Hugging Face requests may appear; no token is needed.
+`requirements-ingest.txt` installs everything. To run only the server (for example on a
+host that receives a pre-built `chroma_db`), `requirements.txt` is enough. On the first
+ingestion or server start, the ONNX embedding model (~80 MB download) is saved in
+`./models`. After that, both run without network access.
 
 ---
 
@@ -364,7 +373,7 @@ change, with identical results.
 
 ## Sample output (from the provided assessment PDF)
 
-Real output from a clean environment (fresh virtual environment, `pip install -r requirements.txt`, no pre-existing `chroma_db`).
+Real output from a clean environment (fresh virtual environment, `pip install -r requirements-ingest.txt`).
 
 Ingestion of `assessment_standard_vectorization.pdf`:
 
@@ -498,16 +507,19 @@ floating-point differences across hardware or library versions.
 
 ## Dependencies
 
-`requirements.txt` pins every direct dependency (tested together on Python 3.12.6):
+Every direct dependency is pinned (tested together on Python 3.12.6).
+
+`requirements.txt` (server runtime; about 316 MB installed on Linux):
 
 ```text
-PyMuPDF==1.28.2
-sentence-transformers==6.1.0
 chromadb==1.5.9
 fastapi==0.141.1
 uvicorn==0.54.0
 pydantic==2.13.5
 ```
+
+`requirements-ingest.txt` adds `PyMuPDF==1.28.2` for ingestion. ONNX Runtime and the
+tokenizer come with `chromadb`.
 
 No LangChain, LlamaIndex or other RAG/agent framework is used, only raw library calls.
 PyMuPDF is imported as `pymupdf` (aliased to `fitz`), because the bare `import fitz`
@@ -531,13 +543,17 @@ Not deployed yet; see [Live Deployment](#live-deployment).
      from the PDF. The PDF must then be available to the deployment privately, since it
      is not in the repository.
 - **Start command:** `uvicorn server:app --host 0.0.0.0 --port $PORT` (use the port the platform provides).
-- **Memory.** The sentence-transformers/PyTorch runtime and embedding model need a
-  memory budget suitable for the chosen hosting plan. Measured locally on Windows 11 /
-  Python 3.12 (CPU), the server process used about 570 MB resident memory (1.5 GB
-  committed) after startup and about 25 queries. This is one measurement, not a
-  guarantee; approximately 1 GB or more may be appropriate depending on the environment.
-- The model is downloaded from Hugging Face on first start, so the host needs outbound
-  internet access at least once (or a pre-populated Hugging Face cache).
+- **Memory.** The earlier PyTorch-based server used about 570 MB resident memory
+  (measured on Windows 11 / Python 3.12). The ONNX Runtime server has not been
+  re-measured; allow a similar budget until it is.
+- The model is downloaded on first start (or by `python embedding.py`), so the host
+  needs outbound internet access at least once, or a pre-populated `./models`.
+- **Vercel.** `vercel.json` runs `python embedding.py` as the build step, so the model
+  ships inside the function bundle (about 316 MB of packages + 88 MB of model, under
+  Vercel's 500 MB Python limit). The deployment filesystem is read-only, so when
+  `VERCEL=1` the server copies `./chroma_db` to `/tmp` on first use. `chroma_db` is not
+  in Git, so it must be uploaded with a CLI deploy (`vercel deploy` respects
+  `.vercelignore`, which does not exclude it); without it `/query` returns 503.
 
 ---
 
@@ -556,7 +572,7 @@ Not deployed yet; see [Live Deployment](#live-deployment).
   - Live deployment link (also stated at the top of this README)
   - README.md
 - No authentication is used, so no credentials are required.
-- `chroma_db/`, virtual environments and `__pycache__/` are ignored by `.gitignore`. PDFs
+- `chroma_db/`, `models/`, virtual environments and `__pycache__/` are ignored by `.gitignore`. PDFs
   are ignored too, because the assessment PDF is marked "Do not share or distribute this
   document". Obtain it from the assessment platform and place it in the project folder
   before running ingestion.

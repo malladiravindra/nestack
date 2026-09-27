@@ -3,56 +3,30 @@
 Usage:
     python ingest.py --file document.pdf
 
-The embedding / database constants and helpers defined here are imported by
-``server.py`` so that documents and queries are always embedded with exactly
+The embedding / database configuration lives in ``embedding.py`` and is shared
+with ``server.py``, so documents and queries are always embedded with exactly
 the same model and configuration.
 """
 
 import argparse
-import os
 import re
 import sys
 from pathlib import Path
 
-# Harmless on Windows without Developer Mode; hide it to keep output readable.
-os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
-
 import chromadb
 import pymupdf as fitz  # PyMuPDF; the bare `fitz` alias is deprecated since 1.24
-from sentence_transformers import SentenceTransformer
 
 from chunker import DEFAULT_CHUNK_SIZE, DEFAULT_OVERLAP, Chunk, chunk_page_text
+from embedding import (
+    CHROMA_DIR,
+    COLLECTION_METADATA,
+    COLLECTION_NAME,
+    EMBEDDING_MODEL_NAME,
+    embed_texts,
+    load_embedding_model,
+)
 
-# --- Shared configuration (also used by server.py) --------------------------
-EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
-CHROMA_DIR = Path(__file__).resolve().parent / "chroma_db"
-COLLECTION_NAME = "pdf_chunks"
-# Cosine distance on L2-normalised embeddings: distance = 1 - cosine_similarity.
-COLLECTION_METADATA = {"hnsw:space": "cosine"}
-
-EMBEDDING_BATCH_SIZE = 32
 _WHITESPACE_RE = re.compile(r"\s+")
-
-
-def load_embedding_model() -> SentenceTransformer:
-    """Load the local sentence-transformers model (downloaded once, then cached)."""
-    return SentenceTransformer(EMBEDDING_MODEL_NAME)
-
-
-def embed_texts(model: SentenceTransformer, texts: list[str]) -> list[list[float]]:
-    """Embed texts with the single embedding configuration used everywhere.
-
-    Embeddings are L2-normalised so cosine distance is well defined and the
-    returned score is a true cosine similarity.
-    """
-    vectors = model.encode(
-        texts,
-        batch_size=EMBEDDING_BATCH_SIZE,
-        normalize_embeddings=True,
-        convert_to_numpy=True,
-        show_progress_bar=False,
-    )
-    return vectors.tolist()
 
 
 # --- Ingestion steps ---------------------------------------------------------
