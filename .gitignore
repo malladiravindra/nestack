@@ -14,3 +14,5 @@ chroma_db/
 
 # The assessment PDF is marked "Do not share or distribute this document."
 *.pdf
+
+.hf_cache/

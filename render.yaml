@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: nestack-api
+    runtime: python
+    plan: free
+    buildCommand: bash build.sh
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      # Keep the downloaded model inside the project so it ships from build to runtime.
+      - key: HF_HOME
+        value: /opt/render/project/src/.hf_cache
