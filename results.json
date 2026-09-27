@@ -1,0 +1,152 @@
+[
+  {
+    "query": "What command is required to run the ingestion script?",
+    "query_type": "specific_factual",
+    "request": {
+      "query": "What command is required to run the ingestion script?",
+      "top_k": 3
+    },
+    "response": [
+      {
+        "chunk_text": "ELIVERABLES • Ingestion script and retrieval server, fully runnable from your README instructions. • README: setup steps, justification for chunk size and overlap, justification for embedding model and vector DB, and sample output from the provided PDF. • results.json: output of at least three different queries run against the provided PDF, in the response format above.",
+        "page_number": 1,
+        "score": 0.3242228031158447
+      },
+      {
+        "chunk_text": "SQL LIKE, or full-text search of any kind. CONSTRAINTS • No LangChain, LlamaIndex, or any agent/RAG framework. Use raw SDK and library calls only. • Any PDF parsing library is permitted (e.g. PyMuPDF, pdfplumber, pdf-parse). • Any embedding model and any vector database are permitted. State and justify your choices in the README. • The pipeline must run successfully on the sample PDF provided on the assessment platform. DELIVERABLES • Ingestion script and retrieval server, fully runnable from yo",
+        "page_number": 1,
+        "score": 0.2129649519920349
+      },
+      {
+        "chunk_text": "are your decision - justify both in the README. 3. Generate a vector embedding for each chunk using any embedding model (e.g. OpenAI text-embedding-3-small, sentence-transformers, Cohere Embed). 4. Store each embedding together with its chunk text and source page number in a vector database of your choice (e.g. ChromaDB, FAISS, Pinecone, pgvector). The script must be runnable as: python ingest.py --file document.pdf PART 2 - RETRIEVAL ENDPOINT Expose a single HTTP endpoint that embeds the incomi",
+        "page_number": 1,
+        "score": 0.2113327980041504
+      }
+    ]
+  },
+  {
+    "query": "Which contributors must be added to the GitHub repository?",
+    "query_type": "specific_factual",
+    "request": {
+      "query": "Which contributors must be added to the GitHub repository?",
+      "top_k": 3
+    },
+    "response": [
+      {
+        "chunk_text": " A live deployment link - Any necessary credentials if your project includes authentication Additionally, ensure your repository includes a README.md with: - The deployment link clearly mentioned - Setup and run instructions if applicable NOTE: PUBLIC REPOSITORIES ARE DISQUALIFIED FROM THE HIRING PROCESS",
+        "page_number": 2,
+        "score": 0.3586980104446411
+      },
+      {
+        "chunk_text": "to each query. Code clarity and README completeness 15% Readable code; setup instructions work on a clean machine. Instructions Kindly create a private GitHub repository named: {yourName_Nestack_Submission} (e.g., roy_Nestack_Submission) and add the following contributors for evaluation: - bishal@nestack.com - sannidhya@nestack.com - sanjay@nestack.com Your submission must include: - A ZIP file of your complete codebase - A live deployment link - Any necessary credentials if your project include",
+        "page_number": 2,
+        "score": 0.3099556565284729
+      },
+      {
+        "chunk_text": "Technical Assessment - Nestack Do not share or distribute this document. Page PAGE EVALUATION Criterion Weight What we look for Pipeline runs end-to-end without errors 35% Ingestion completes; retrieval returns relevant results. Chunking and embedding design decisions 25% Choices are justified with reasoning in the README. Retrieval quality - relevance of returned chunks 25% results.json entries are semantically relevant to each query. Code clarity and README completeness 15% Readable code; setu",
+        "page_number": 2,
+        "score": 0.036687254905700684
+      }
+    ]
+  },
+  {
+    "query": "What are the main components and requirements of this PDF vectorisation pipeline?",
+    "query_type": "broad_thematic",
+    "request": {
+      "query": "What are the main components and requirements of this PDF vectorisation pipeline?",
+      "top_k": 3
+    },
+    "response": [
+      {
+        "chunk_text": "Technical Assessment - Nestack Do not share or distribute this document. Page PAGE PDF Vectorisation Pipeline Language Python or Node.js Vector DB Your choice OVERVIEW Build a pipeline with two components: (1) an ingestion script that extracts text from a PDF, chunks it, generates vector embeddings, and stores them in a vector database; and (2) a retrieval endpoint that accepts a plain-text query and returns the most semantically similar chunks from the stored embeddings. There is no LLM call on",
+        "page_number": 1,
+        "score": 0.6508060097694397
+      },
+      {
+        "chunk_text": "SQL LIKE, or full-text search of any kind. CONSTRAINTS • No LangChain, LlamaIndex, or any agent/RAG framework. Use raw SDK and library calls only. • Any PDF parsing library is permitted (e.g. PyMuPDF, pdfplumber, pdf-parse). • Any embedding model and any vector database are permitted. State and justify your choices in the README. • The pipeline must run successfully on the sample PDF provided on the assessment platform. DELIVERABLES • Ingestion script and retrieval server, fully runnable from yo",
+        "page_number": 1,
+        "score": 0.530357837677002
+      },
+      {
+        "chunk_text": "ELIVERABLES • Ingestion script and retrieval server, fully runnable from your README instructions. • README: setup steps, justification for chunk size and overlap, justification for embedding model and vector DB, and sample output from the provided PDF. • results.json: output of at least three different queries run against the provided PDF, in the response format above.",
+        "page_number": 1,
+        "score": 0.4985177516937256
+      }
+    ]
+  },
+  {
+    "query": "What retrieval methods are prohibited by the assessment?",
+    "query_type": "edge_case_constraint",
+    "request": {
+      "query": "What retrieval methods are prohibited by the assessment?",
+      "top_k": 3
+    },
+    "response": [
+      {
+        "chunk_text": "Technical Assessment - Nestack Do not share or distribute this document. Page PAGE EVALUATION Criterion Weight What we look for Pipeline runs end-to-end without errors 35% Ingestion completes; retrieval returns relevant results. Chunking and embedding design decisions 25% Choices are justified with reasoning in the README. Retrieval quality - relevance of returned chunks 25% results.json entries are semantically relevant to each query. Code clarity and README completeness 15% Readable code; setu",
+        "page_number": 2,
+        "score": 0.403454065322876
+      },
+      {
+        "chunk_text": "SQL LIKE, or full-text search of any kind. CONSTRAINTS • No LangChain, LlamaIndex, or any agent/RAG framework. Use raw SDK and library calls only. • Any PDF parsing library is permitted (e.g. PyMuPDF, pdfplumber, pdf-parse). • Any embedding model and any vector database are permitted. State and justify your choices in the README. • The pipeline must run successfully on the sample PDF provided on the assessment platform. DELIVERABLES • Ingestion script and retrieval server, fully runnable from yo",
+        "page_number": 1,
+        "score": 0.4001971483230591
+      },
+      {
+        "chunk_text": "ELIVERABLES • Ingestion script and retrieval server, fully runnable from your README instructions. • README: setup steps, justification for chunk size and overlap, justification for embedding model and vector DB, and sample output from the provided PDF. • results.json: output of at least three different queries run against the provided PDF, in the response format above.",
+        "page_number": 1,
+        "score": 0.31919074058532715
+      }
+    ]
+  },
+  {
+    "query": "What restrictions apply to the retrieval process?",
+    "query_type": "edge_case_ambiguous",
+    "request": {
+      "query": "What restrictions apply to the retrieval process?",
+      "top_k": 3
+    },
+    "response": [
+      {
+        "chunk_text": "Technical Assessment - Nestack Do not share or distribute this document. Page PAGE EVALUATION Criterion Weight What we look for Pipeline runs end-to-end without errors 35% Ingestion completes; retrieval returns relevant results. Chunking and embedding design decisions 25% Choices are justified with reasoning in the README. Retrieval quality - relevance of returned chunks 25% results.json entries are semantically relevant to each query. Code clarity and README completeness 15% Readable code; setu",
+        "page_number": 2,
+        "score": 0.35502302646636963
+      },
+      {
+        "chunk_text": "2 - RETRIEVAL ENDPOINT Expose a single HTTP endpoint that embeds the incoming query using the same model used during ingestion and performs a similarity search against the stored vectors. Method Endpoint Description POST /query Request body: { \"query\": string, \"top_k\": int }. Response: array of { chunk_text, page_number, score }. Retrieval must use vector similarity search against the database. Do not use keyword search, SQL LIKE, or full-text search of any kind. CONSTRAINTS • No LangChain, Llam",
+        "page_number": 1,
+        "score": 0.34449124336242676
+      },
+      {
+        "chunk_text": "ELIVERABLES • Ingestion script and retrieval server, fully runnable from your README instructions. • README: setup steps, justification for chunk size and overlap, justification for embedding model and vector DB, and sample output from the provided PDF. • results.json: output of at least three different queries run against the provided PDF, in the response format above.",
+        "page_number": 1,
+        "score": 0.3216012716293335
+      }
+    ]
+  },
+  {
+    "query": "How will the submission be evaluated and weighted?",
+    "query_type": "additional",
+    "request": {
+      "query": "How will the submission be evaluated and weighted?",
+      "top_k": 3
+    },
+    "response": [
+      {
+        "chunk_text": "Technical Assessment - Nestack Do not share or distribute this document. Page PAGE EVALUATION Criterion Weight What we look for Pipeline runs end-to-end without errors 35% Ingestion completes; retrieval returns relevant results. Chunking and embedding design decisions 25% Choices are justified with reasoning in the README. Retrieval quality - relevance of returned chunks 25% results.json entries are semantically relevant to each query. Code clarity and README completeness 15% Readable code; setu",
+        "page_number": 2,
+        "score": 0.3666759133338928
+      },
+      {
+        "chunk_text": "to each query. Code clarity and README completeness 15% Readable code; setup instructions work on a clean machine. Instructions Kindly create a private GitHub repository named: {yourName_Nestack_Submission} (e.g., roy_Nestack_Submission) and add the following contributors for evaluation: - bishal@nestack.com - sannidhya@nestack.com - sanjay@nestack.com Your submission must include: - A ZIP file of your complete codebase - A live deployment link - Any necessary credentials if your project include",
+        "page_number": 2,
+        "score": 0.18329298496246338
+      },
+      {
+        "chunk_text": "ELIVERABLES • Ingestion script and retrieval server, fully runnable from your README instructions. • README: setup steps, justification for chunk size and overlap, justification for embedding model and vector DB, and sample output from the provided PDF. • results.json: output of at least three different queries run against the provided PDF, in the response format above.",
+        "page_number": 1,
+        "score": 0.17072200775146484
+      }
+    ]
+  }
+]

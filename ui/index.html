@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Vector Search</title>
+  <meta name="description" content="Semantic search over PDF chunks using the POST /query vector retrieval API.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315803d'/%3E%3Ccircle cx='14' cy='14' r='6' fill='none' stroke='white' stroke-width='3'/%3E%3Cpath d='m19 19 6 6' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    /* ---------- Design tokens ---------- */
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --fg: #0f172a;
+      --fg-muted: #475569;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --accent: #15803d;
+      --accent-hover: #166534;
+      --on-accent: #ffffff;
+      --accent-soft: #dcfce7;
+      --accent-soft-fg: #14532d;
+      --meter-track: #e2e8f0;
+      --danger: #b91c1c;
+      --danger-soft: #fef2f2;
+      --danger-border: #fecaca;
+      --warn: #a16207;
+      --warn-soft: #fefce8;
+      --warn-border: #fde68a;
+      --ring: #2563eb;
+      --code-bg: #0f172a;
+      --code-fg: #e2e8f0;
+      --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+      --shadow-md: 0 1px 3px rgb(15 23 42 / 0.08), 0 4px 16px rgb(15 23 42 / 0.06);
+
+      --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+      --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
+      --radius-sm: 6px; --radius: 10px; --radius-lg: 14px;
+      --dur-fast: 120ms; --dur: 180ms;
+      --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0b1120; --surface: #111a2e; --surface-2: #172238;
+        --fg: #f1f5f9; --fg-muted: #9fb0c7; --border: #22304a; --border-strong: #3a4a66;
+        --accent: #22c55e; --accent-hover: #4ade80; --on-accent: #052e16;
+        --accent-soft: #0f2e1d; --accent-soft-fg: #86efac; --meter-track: #22304a;
+        --danger: #f87171; --danger-soft: #2a1215; --danger-border: #5b2227;
+        --warn: #facc15; --warn-soft: #2a2410; --warn-border: #574812;
+        --ring: #60a5fa; --code-bg: #070c18; --code-fg: #d9e2ef;
+        --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4); --shadow-md: 0 1px 3px rgb(0 0 0 / 0.45), 0 6px 20px rgb(0 0 0 / 0.3);
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0b1120; --surface: #111a2e; --surface-2: #172238;
+      --fg: #f1f5f9; --fg-muted: #9fb0c7; --border: #22304a; --border-strong: #3a4a66;
+      --accent: #22c55e; --accent-hover: #4ade80; --on-accent: #052e16;
+      --accent-soft: #0f2e1d; --accent-soft-fg: #86efac; --meter-track: #22304a;
+      --danger: #f87171; --danger-soft: #2a1215; --danger-border: #5b2227;
+      --warn: #facc15; --warn-soft: #2a2410; --warn-border: #574812;
+      --ring: #60a5fa; --code-bg: #070c18; --code-fg: #d9e2ef;
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4); --shadow-md: 0 1px 3px rgb(0 0 0 / 0.45), 0 6px 20px rgb(0 0 0 / 0.3);
+      color-scheme: dark;
+    }
+
+    /* ---------- Base ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; min-height: 100dvh; background: var(--bg); color: var(--fg);
+      font: 400 16px/1.6 var(--font-sans); -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3 { margin: 0; line-height: 1.25; text-wrap: balance; }
+    p { margin: 0; }
+    code, pre, kbd { font-family: var(--font-mono); }
+    button, input, select { font: inherit; color: inherit; }
+    svg.icon { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-sm); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+    .skip-link { position: absolute; left: var(--space-4); top: -48px; z-index: 100; padding: var(--space-2) var(--space-4);
+      background: var(--accent); color: var(--on-accent); border-radius: var(--radius-sm); text-decoration: none; font-weight: 600; }
+    .skip-link:focus { top: var(--space-3); }
+
+    .container { width: 100%; max-width: 920px; margin: 0 auto; padding: 0 var(--space-4); }
+    @media (min-width: 768px) { .container { padding: 0 var(--space-5); } }
+
+    /* ---------- Header ---------- */
+    .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: saturate(1.4) blur(8px); border-bottom: 1px solid var(--border); }
+    .topbar .container { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; }
+    .brand { display: flex; align-items: center; gap: var(--space-3); margin-right: auto; min-width: 0; }
+    .brand-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: var(--on-accent);
+      display: grid; place-items: center; flex: none; }
+    .brand-mark svg.icon { width: 18px; height: 18px; stroke-width: 2.5; }
+    .brand-name { font-weight: 600; font-size: 15px; white-space: nowrap; }
+    .brand-sub { font-size: 12.5px; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 480px) { .brand-sub { display: none; } }
+
+    .status { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; padding: 0 var(--space-3);
+      border: 1px solid var(--border); border-radius: 999px; font-size: 13px; color: var(--fg-muted);
+      background: var(--surface); white-space: nowrap; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); flex: none; }
+    .status[data-state="online"] .status-dot { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .status[data-state="offline"] .status-dot { background: var(--danger); box-shadow: 0 0 0 3px var(--danger-soft); }
+    .status[data-state="checking"] .status-dot { animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: 0.35; } }
+
+    .icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: var(--radius-sm);
+      border: 1px solid transparent; background: transparent; color: var(--fg-muted); cursor: pointer;
+      transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), border-color var(--dur-fast); }
+    .icon-btn:hover { background: var(--surface-2); color: var(--fg); }
+    .icon-btn:active { background: var(--border); }
+
+    /* ---------- Hero + search ---------- */
+    main.container { padding-top: var(--space-6); padding-bottom: var(--space-8); }
+    @media (min-width: 768px) { main.container { padding-top: var(--space-7); } }
+    main:focus { outline: none; }
+    code, pre, kbd, .meta, .score-value { font-variant-ligatures: none; }
+    .hero { margin-bottom: var(--space-5); }
+    .eyebrow { display: inline-flex; align-items: center; gap: var(--space-2); font: 500 12px/1 var(--font-mono);
+      letter-spacing: 0.02em; color: var(--accent-soft-fg); background: var(--accent-soft); padding: 6px 10px;
+      border-radius: 999px; margin-bottom: var(--space-3); }
+    .hero h1 { font-size: clamp(26px, 4.2vw, 36px); font-weight: 700; letter-spacing: -0.02em; }
+    .hero p { margin-top: var(--space-2); color: var(--fg-muted); max-width: 62ch; }
+
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md); padding: var(--space-4); }
+    @media (min-width: 768px) { .panel { padding: var(--space-5); } }
+
+    .search-row { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
+    @media (min-width: 640px) { .search-row { grid-template-columns: 1fr 108px auto; align-items: end; } }
+    .field label, .field .label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    .label-hint { font-weight: 400; color: var(--fg-muted); }
+    .input-wrap { position: relative; }
+    .input-wrap > svg.icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--fg-muted); pointer-events: none; }
+    .input { width: 100%; height: 48px; padding: 0 var(--space-4); background: var(--bg); border: 1px solid var(--border-strong);
+      border-radius: var(--radius); transition: border-color var(--dur-fast), box-shadow var(--dur-fast); }
+    .input.has-icon { padding-left: 42px; padding-right: 52px; }
+    .input:hover { border-color: var(--fg-muted); }
+    .input:focus { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 22%, transparent); }
+    .input[aria-invalid="true"] { border-color: var(--danger); }
+    .input[type="number"] { font-family: var(--font-mono); text-align: center; padding: 0 var(--space-2); }
+    .kbd-hint { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--fg-muted);
+      border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; pointer-events: none; }
+    @media (max-width: 640px), (pointer: coarse) { .kbd-hint { display: none; } .input.has-icon { padding-right: var(--space-4); } }
+    .field-error { display: flex; gap: 6px; align-items: flex-start; margin-top: var(--space-2); font-size: 13.5px; color: var(--danger); }
+    .field-error svg.icon { width: 16px; height: 16px; margin-top: 3px; }
+    .field-error[hidden] { display: none; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); height: 48px;
+      padding: 0 var(--space-5); border-radius: var(--radius); border: 1px solid transparent; font-weight: 600;
+      cursor: pointer; white-space: nowrap; touch-action: manipulation;
+      transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast), color var(--dur-fast), transform var(--dur-fast); }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: var(--on-accent); }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-secondary { background: var(--surface); border-color: var(--border-strong); color: var(--fg); height: 40px; padding: 0 var(--space-4); font-weight: 500; }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-2); }
+    .spinner { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+      animation: spin 0.7s linear infinite; }
+    .btn .spinner { display: none; }
+    .btn[aria-busy="true"] .spinner { display: inline-block; }
+    .btn[aria-busy="true"] .btn-icon { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .examples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-4); }
+    .examples-label { font-size: 13px; color: var(--fg-muted); margin-right: var(--space-1); }
+    .chip { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 12px; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--surface-2); font-size: 13.5px; color: var(--fg); cursor: pointer;
+      text-align: left; transition: border-color var(--dur-fast), background var(--dur-fast); }
+    .chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+    details.settings { margin-top: var(--space-4); border-top: 1px solid var(--border); padding-top: var(--space-3); }
+    details.settings summary { display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; font-size: 13.5px;
+      color: var(--fg-muted); list-style: none; min-height: 32px; border-radius: var(--radius-sm); }
+    details.settings summary::-webkit-details-marker { display: none; }
+    details.settings summary:hover { color: var(--fg); }
+    details.settings summary .chev { transition: transform var(--dur) var(--ease-out); width: 16px; height: 16px; }
+    details.settings[open] summary .chev { transform: rotate(90deg); }
+    .settings-body { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+    @media (min-width: 640px) { .settings-body { grid-template-columns: 1fr auto; align-items: end; } }
+    .settings-body .input { height: 40px; font-family: var(--font-mono); font-size: 14px; }
+    .help { font-size: 13px; color: var(--fg-muted); grid-column: 1 / -1; }
+
+    /* ---------- Results ---------- */
+    .results { margin-top: var(--space-6); }
+    .results-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+    .results-head h2 { font-size: 18px; font-weight: 600; margin-right: auto; }
+    .meta { font: 400 13px/1.4 var(--font-mono); color: var(--fg-muted); }
+    .segmented { display: inline-flex; padding: 3px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
+    .segmented button { height: 32px; padding: 0 var(--space-3); border: 0; background: transparent; border-radius: 7px;
+      font-size: 13.5px; font-weight: 500; color: var(--fg-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .segmented button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow-sm); }
+    .segmented svg.icon { width: 16px; height: 16px; }
+
+    .result-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4);
+      box-shadow: var(--shadow-sm); animation: rise 260ms var(--ease-out) both; }
+    @media (min-width: 768px) { .card { padding: var(--space-4) var(--space-5); } }
+    .card:nth-child(2) { animation-delay: 40ms; } .card:nth-child(3) { animation-delay: 80ms; }
+    .card:nth-child(4) { animation-delay: 120ms; } .card:nth-child(n+5) { animation-delay: 160ms; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+    .card-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-3); }
+    .rank { font: 600 13px/1 var(--font-mono); color: var(--fg-muted); min-width: 24px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px;
+      font-size: 13px; font-weight: 500; background: var(--surface-2); border: 1px solid var(--border); }
+    .badge svg.icon { width: 14px; height: 14px; color: var(--fg-muted); }
+    .score { display: inline-flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+    .score-label { font-size: 12px; color: var(--fg-muted); }
+    .score-value { font: 500 14px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+    .meter { width: 88px; height: 6px; border-radius: 999px; background: var(--meter-track); overflow: hidden; }
+    .meter > span { display: block; height: 100%; background: var(--accent); border-radius: inherit; transform-origin: left;
+      animation: grow 500ms var(--ease-out) both; }
+    @keyframes grow { from { transform: scaleX(0); } }
+    .chunk { color: var(--fg); font-size: 15.5px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 78ch; }
+    .card-foot { display: flex; align-items: center; justify-content: flex-end; margin-top: var(--space-2); }
+    .copy-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: var(--radius-sm);
+      border: 1px solid transparent; background: transparent; color: var(--fg-muted); font-size: 13px; cursor: pointer; }
+    .copy-btn:hover { background: var(--surface-2); color: var(--fg); }
+    .copy-btn svg.icon { width: 15px; height: 15px; }
+    .copy-btn[data-copied="true"] { color: var(--accent); }
+
+    .json-view { background: var(--code-bg); color: var(--code-fg); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); }
+    .json-bar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+      border-bottom: 1px solid rgb(255 255 255 / 0.08); font: 500 12.5px/1 var(--font-mono); color: #94a3b8; }
+    .json-bar .method { color: #86efac; }
+    .json-bar .copy-btn { margin-left: auto; color: #cbd5e1; }
+    .json-bar .copy-btn:hover { background: rgb(255 255 255 / 0.08); color: #fff; }
+    .json-view pre { margin: 0; padding: var(--space-4); overflow: auto; max-height: 560px; font-size: 13px; line-height: 1.6; tab-size: 2;
+      white-space: pre-wrap; overflow-wrap: anywhere; }
+    .json-section { font: 500 12px/1 var(--font-mono); color: #94a3b8; padding: var(--space-3) var(--space-4) 0; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ---------- States ---------- */
+    .skeleton { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); }
+    .sk-line { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
+      background-size: 200% 100%; animation: shimmer 1.2s linear infinite; margin-top: 10px; }
+    .sk-line.short { width: 32%; margin-top: 0; height: 14px; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    .alert { display: flex; gap: var(--space-3); padding: var(--space-4) var(--space-5); border-radius: var(--radius-lg); border: 1px solid; }
+    .alert svg.icon { width: 20px; height: 20px; margin-top: 2px; }
+    .alert h3 { font-size: 15.5px; font-weight: 600; }
+    .alert p { margin-top: 4px; font-size: 14.5px; }
+    .alert-danger { background: var(--danger-soft); border-color: var(--danger-border); }
+    .alert-danger > svg.icon { color: var(--danger); }
+    .alert-warn { background: var(--warn-soft); border-color: var(--warn-border); }
+    .alert-warn > svg.icon { color: var(--warn); }
+    .alert-body { min-width: 0; flex: 1; }
+    .cmd { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); background: var(--code-bg); color: var(--code-fg);
+      border-radius: var(--radius-sm); padding: 6px 6px 6px var(--space-3); font: 13px/1.5 var(--font-mono); }
+    .cmd code { overflow-x: auto; white-space: nowrap; flex: 1; min-width: 0; }
+    .cmd .copy-btn { color: #cbd5e1; flex: none; }
+    .cmd .copy-btn:hover { background: rgb(255 255 255 / 0.1); color: #fff; }
+    .alert-actions { margin-top: var(--space-3); display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+    .empty { text-align: center; padding: var(--space-6) var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); color: var(--fg-muted); }
+    .empty h3 { color: var(--fg); font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+
+    /* ---------- How it works ---------- */
+    .how { margin-top: var(--space-7); }
+    .how h2 { font-size: 18px; font-weight: 600; }
+    .how > p { color: var(--fg-muted); margin-top: 4px; font-size: 15px; }
+    .steps { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-3);
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); counter-reset: step; }
+    .step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3) var(--space-4); counter-increment: step; }
+    .step::before { content: counter(step, decimal-leading-zero); font: 500 12px/1 var(--font-mono); color: var(--accent-soft-fg);
+      background: var(--accent-soft); border-radius: 5px; padding: 3px 6px; display: inline-block; margin-bottom: var(--space-2); }
+    .step strong { display: block; font-size: 14.5px; font-weight: 600; }
+    .step span { display: block; font-size: 13.5px; color: var(--fg-muted); line-height: 1.5; margin-top: 2px; }
+    .note { margin-top: var(--space-4); font-size: 13.5px; color: var(--fg-muted); padding: var(--space-3) var(--space-4); border-left: 3px solid var(--accent);
+      background: var(--surface); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .note code { font-size: 12.5px; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; color: var(--fg); }
+
+    footer { border-top: 1px solid var(--border); padding: var(--space-5) 0; font-size: 13px; color: var(--fg-muted); }
+    footer .container { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); justify-content: space-between; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to search</a>
+
+  <!-- Icon sprite (Lucide-style, 24px grid, 2px stroke) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <div class="container">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><svg class="icon"><use href="#i-search"/></svg></div>
+        <div style="min-width:0">
+          <div class="brand-name">PDF Vector Search</div>
+          <div class="brand-sub">Semantic retrieval · all-MiniLM-L6-v2 · ChromaDB</div>
+        </div>
+      </div>
+      <span class="status" id="status" data-state="checking" role="status" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span><span id="status-text">Checking API…</span>
+      </span>
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch to dark theme">
+        <svg class="icon" aria-hidden="true"><use id="theme-icon" href="#i-moon"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" class="container" tabindex="-1">
+    <section class="hero" aria-labelledby="hero-title">
+      <span class="eyebrow">POST /query · vector similarity only</span>
+      <h1 id="hero-title">Search the document by meaning</h1>
+      <p>Ask a question in plain language. The query is embedded with the same model used at ingestion,
+        and the closest chunks are returned exactly as the API sends them. No keyword search, no generated answer.</p>
+    </section>
+
+    <section class="panel" aria-label="Search">
+      <form id="search-form" novalidate>
+        <div class="search-row">
+          <div class="field">
+            <label for="q">Query</label>
+            <div class="input-wrap">
+              <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+              <input class="input has-icon" id="q" name="q" type="search" autocomplete="off" spellcheck="false"
+                     placeholder="e.g. What command runs the ingestion script?" aria-describedby="q-error" maxlength="1000">
+              <kbd class="kbd-hint" aria-hidden="true" id="kbd-hint">/</kbd>
+            </div>
+          </div>
+          <div class="field">
+            <label for="k">Results <span class="label-hint">(1–20)</span></label>
+            <input class="input" id="k" name="k" type="number" inputmode="numeric" min="1" max="20" step="1" value="3" aria-describedby="q-error">
+          </div>
+          <button class="btn btn-primary" id="submit" type="submit">
+            <svg class="icon btn-icon" aria-hidden="true"><use href="#i-search"/></svg>
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Search</span>
+          </button>
+        </div>
+        <p class="field-error" id="q-error" role="alert" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg><span id="q-error-text"></span>
+        </p>
+      </form>
+
+      <div class="examples" role="group" aria-label="Example queries">
+        <span class="examples-label">Try:</span>
+        <button class="chip" type="button">What command is required to run the ingestion script?</button>
+        <button class="chip" type="button">What are the main components of the pipeline?</button>
+        <button class="chip" type="button">What retrieval methods are prohibited?</button>
+        <button class="chip" type="button">How will the submission be evaluated?</button>
+      </div>
+
+      <details class="settings" id="settings">
+        <summary><svg class="icon chev" aria-hidden="true"><use href="#i-chev"/></svg>API connection</summary>
+        <form class="settings-body" id="api-form">
+          <div class="field">
+            <label for="api-base">API base URL</label>
+            <input class="input" id="api-base" type="url" autocomplete="url" spellcheck="false" placeholder="http://localhost:8000">
+          </div>
+          <button class="btn btn-secondary" type="submit">
+            <svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>Save &amp; check
+          </button>
+          <p class="help">Requests go to <code id="endpoint-preview">…/query</code>. Change this if the API runs on another host or port, or on a deployed URL.</p>
+        </form>
+      </details>
+    </section>
+
+    <section class="results" id="results" aria-labelledby="results-title" hidden>
+      <div class="results-head">
+        <h2 id="results-title">Results</h2>
+        <span class="meta" id="results-meta" aria-live="polite"></span>
+        <div class="segmented" role="group" aria-label="Result view">
+          <button type="button" id="view-cards" aria-pressed="true"><svg class="icon" aria-hidden="true"><use href="#i-list"/></svg>Chunks</button>
+          <button type="button" id="view-json" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#i-code"/></svg>JSON</button>
+        </div>
+      </div>
+      <div id="results-body" aria-busy="false"></div>
+    </section>
+
+    <section class="how" aria-labelledby="how-title">
+      <h2 id="how-title">How it works</h2>
+      <p>Ingestion runs once, offline. This page only calls the retrieval endpoint.</p>
+      <ol class="steps">
+        <li class="step"><strong>Extract</strong><span>PyMuPDF reads text page by page, keeping page numbers</span></li>
+        <li class="step"><strong>Chunk</strong><span>500-character windows, 75 overlap, stride 425</span></li>
+        <li class="step"><strong>Embed</strong><span>all-MiniLM-L6-v2, 384-dim, run locally</span></li>
+        <li class="step"><strong>Store</strong><span>ChromaDB collection <code>pdf_chunks</code>, cosine space</span></li>
+        <li class="step"><strong>Retrieve</strong><span>Query embedded with the same model, nearest chunks returned</span></li>
+      </ol>
+      <p class="note"><strong>Score</strong> = <code>1 − cosine distance</code> (cosine similarity; higher is more similar). Scores are relative within this
+        model and document. Chunks are fixed character windows, so they can start or end mid-word.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <span>PDF Vectorisation Pipeline · raw retrieval results only</span>
+      <span>Press <kbd>/</kbd> to focus search</span>
+    </div>
+  </footer>
+
+  <template id="tpl-card">
+    <li class="card">
+      <div class="card-head">
+        <span class="rank"></span>
+        <span class="badge"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><span class="page"></span></span>
+        <span class="score">
+          <span class="score-label">score</span>
+          <span class="meter" aria-hidden="true"><span></span></span>
+          <span class="score-value"></span>
+        </span>
+      </div>
+      <p class="chunk"></p>
+      <div class="card-foot">
+        <button class="copy-btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy text</span></button>
+      </div>
+    </li>
+  </template>
+
+  <script>
+  (() => {
+    "use strict";
+    const DEFAULT_API = "http://localhost:8000";
+    const REQUEST_TIMEOUT_MS = 60000;
+    const MAX_TOP_K = 20;
+    const INGEST_CMD = "python ingest.py --file assessment_standard_vectorization.pdf";
+    const SERVE_CMD = "uvicorn server:app --host 0.0.0.0 --port 8000";
+
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      form: $("search-form"), q: $("q"), k: $("k"), submit: $("submit"), qError: $("q-error"), qErrorText: $("q-error-text"),
+      results: $("results"), body: $("results-body"), meta: $("results-meta"), viewCards: $("view-cards"), viewJson: $("view-json"),
+      status: $("status"), statusText: $("status-text"), apiForm: $("api-form"), apiBase: $("api-base"),
+      endpointPreview: $("endpoint-preview"), themeToggle: $("theme-toggle"), themeIcon: $("theme-icon"), tplCard: $("tpl-card"),
+    };
+
+    // ---- Storage (per-viewer convenience only; always optional) ----
+    const store = {
+      get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+      set(key, value) { try { localStorage.setItem(key, value); } catch { /* storage unavailable */ } },
+    };
+
+    const state = { view: "cards", last: null, controller: null };
+
+    // ---- Theme ----
+    function currentTheme() {
+      const forced = document.documentElement.dataset.theme;
+      if (forced) return forced;
+      return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function syncThemeButton() {
+      const dark = currentTheme() === "dark";
+      els.themeIcon.setAttribute("href", dark ? "#i-sun" : "#i-moon");
+      els.themeToggle.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+    }
+    const savedTheme = store.get("pvs-theme");
+    if (savedTheme === "light" || savedTheme === "dark") document.documentElement.dataset.theme = savedTheme;
+    syncThemeButton();
+    els.themeToggle.addEventListener("click", () => {
+      const next = currentTheme() === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      store.set("pvs-theme", next);
+      syncThemeButton();
+    });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncThemeButton);
+
+    // ---- API base URL ----
+    function normaliseBase(value) { return (value || "").trim().replace(/\/+$/, ""); }
+    function apiBase() { return normaliseBase(els.apiBase.value) || DEFAULT_API; }
+    els.apiBase.value = store.get("pvs-api-base") || DEFAULT_API;
+    const updatePreview = () => { els.endpointPreview.textContent = `POST ${apiBase()}/query`; };
+    updatePreview();
+    els.apiBase.addEventListener("input", updatePreview);
+    els.apiForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      els.apiBase.value = apiBase();
+      store.set("pvs-api-base", els.apiBase.value);
+      updatePreview();
+      checkStatus();
+    });
+
+    // ---- Status: FastAPI's built-in OpenAPI document confirms the API is reachable ----
+    async function checkStatus() {
+      setStatus("checking", "Checking API…");
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 4000);
+      try {
+        const res = await fetch(`${apiBase()}/openapi.json`, { signal: ctrl.signal });
+        if (!res.ok) throw new Error(String(res.status));
+        const spec = await res.json();
+        const hasQuery = spec && spec.paths && spec.paths["/query"] && spec.paths["/query"].post;
+        setStatus(hasQuery ? "online" : "offline", hasQuery ? "API online" : "Unexpected API");
+      } catch {
+        setStatus("offline", "API offline");
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    function setStatus(stateName, text) { els.status.dataset.state = stateName; els.statusText.textContent = text; }
+
+    // ---- Validation (mirrors the API; the server stays the source of truth) ----
+    function showFieldError(message, field) {
+      els.qErrorText.textContent = message;
+      els.qError.hidden = false;
+      els.q.setAttribute("aria-invalid", String(field === "query"));
+      els.k.setAttribute("aria-invalid", String(field === "top_k"));
+      (field === "top_k" ? els.k : els.q).focus();
+    }
+    function clearFieldError() {
+      els.qError.hidden = true;
+      els.q.removeAttribute("aria-invalid");
+      els.k.removeAttribute("aria-invalid");
+    }
+    function readInput() {
+      const query = els.q.value.trim();
+      const topK = Number(els.k.value);
+      if (!query) return { error: ["Enter a query to search.", "query"] };
+      if (!Number.isInteger(topK) || topK < 1 || topK > MAX_TOP_K) {
+        return { error: [`Results must be a whole number from 1 to ${MAX_TOP_K}.`, "top_k"] };
+      }
+      return { query, topK };
+    }
+
+    // ---- Search ----
+    async function search() {
+      clearFieldError();
+      const input = readInput();
+      if (input.error) { showFieldError(...input.error); return; }
+
+      if (state.controller) state.controller.abort();
+      const ctrl = new AbortController();
+      state.controller = ctrl;
+      const timer = setTimeout(() => ctrl.abort("timeout"), REQUEST_TIMEOUT_MS);
+      const requestBody = { query: input.query, top_k: input.topK };
+      const url = new URL(location.href);
+      url.searchParams.set("q", input.query);
+      url.searchParams.set("k", String(input.topK));
+      history.replaceState(null, "", url);
+
+      setLoading(true, input.topK);
+      const started = performance.now();
+      try {
+        const res = await fetch(`${apiBase()}/query`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+          signal: ctrl.signal,
+        });
+        const elapsed = Math.round(performance.now() - started);
+        let data = null;
+        try { data = await res.json(); } catch { /* non-JSON body */ }
+        if (ctrl !== state.controller) return; // superseded by a newer search
+        setStatus("online", "API online");
+
+        if (res.ok && Array.isArray(data)) {
+          state.last = { request: requestBody, response: data, elapsed };
+          renderResults();
+        } else if (res.status === 422) {
+          renderEmpty();
+          const detail = Array.isArray(data && data.detail) ? data.detail[0] : null;
+          const field = detail && Array.isArray(detail.loc) ? detail.loc[detail.loc.length - 1] : "query";
+          showFieldError(detail ? `${detail.msg} (${field})` : "The request was rejected by validation.", field);
+        } else if (res.status === 503) {
+          renderAlert({
+            tone: "warn", title: "No documents are indexed yet",
+            text: (data && data.detail) || "The vector database is empty or missing.",
+            hint: "Run ingestion once, then search again. The server does not need a restart.",
+            cmd: INGEST_CMD,
+          });
+        } else {
+          renderAlert({ tone: "danger", title: `Unexpected response (HTTP ${res.status})`,
+            text: (data && data.detail && JSON.stringify(data.detail)) || "The API returned an error.", retry: true });
+        }
+      } catch (err) {
+        if (ctrl !== state.controller) return;
+        const timedOut = ctrl.signal.aborted && ctrl.signal.reason === "timeout";
+        setStatus("offline", "API offline");
+        renderAlert({
+          tone: "danger",
+          title: timedOut ? "The request timed out" : "Can't reach the API",
+          text: timedOut
+            ? `No response from ${apiBase()} within ${REQUEST_TIMEOUT_MS / 1000} seconds.`
+            : `Nothing answered at ${apiBase()}. Start the server from the project folder, or update the API URL below the search box.`,
+          cmd: timedOut ? null : SERVE_CMD, retry: true,
+        });
+      } finally {
+        clearTimeout(timer);
+        if (ctrl === state.controller) { setLoading(false); state.controller = null; }
+      }
+    }
+
+    function setLoading(loading, count = 3) {
+      els.submit.disabled = loading;
+      els.submit.setAttribute("aria-busy", String(loading));
+      els.body.setAttribute("aria-busy", String(loading));
+      if (!loading) return;
+      els.results.hidden = false;
+      els.meta.textContent = "Searching…";
+      const list = document.createElement("div");
+      list.className = "result-list";
+      for (let i = 0; i < Math.min(count, 3); i++) {
+        const sk = document.createElement("div");
+        sk.className = "skeleton";
+        sk.innerHTML = '<div class="sk-line short"></div><div class="sk-line"></div><div class="sk-line"></div><div class="sk-line" style="width:70%"></div>';
+        list.appendChild(sk);
+      }
+      els.body.replaceChildren(list);
+    }
+
+    // ---- Rendering (all API text is inserted with textContent) ----
+    function renderResults() {
+      const { response, elapsed, request } = state.last;
+      els.results.hidden = false;
+      const n = response.length;
+      els.meta.textContent = `${n} chunk${n === 1 ? "" : "s"} · top_k ${request.top_k} · ${elapsed} ms`;
+      if (state.view === "json") { renderJson(); return; }
+      if (!n) {
+        els.body.replaceChildren(buildEmpty("No chunks returned", "The collection returned no results for this query."));
+        return;
+      }
+      const list = document.createElement("ol");
+      list.className = "result-list";
+      list.setAttribute("aria-label", "Retrieved chunks, most similar first");
+      response.forEach((item, i) => {
+        const node = els.tplCard.content.firstElementChild.cloneNode(true);
+        node.querySelector(".rank").textContent = `#${i + 1}`;
+        node.querySelector(".page").textContent = `Page ${item.page_number}`;
+        const score = Number(item.score);
+        const scoreEl = node.querySelector(".score-value");
+        scoreEl.textContent = score.toFixed(4);
+        node.querySelector(".score").title = `Exact score: ${item.score}`;
+        node.querySelector(".score").setAttribute("aria-label", `Score ${score.toFixed(4)}`);
+        node.querySelector(".meter > span").style.width = `${Math.max(0, Math.min(1, score)) * 100}%`;
+        node.querySelector(".chunk").textContent = item.chunk_text;
+        const btn = node.querySelector(".copy-btn");
+        btn.setAttribute("aria-label", `Copy text of result ${i + 1}`);
+        btn.addEventListener("click", () => copy(item.chunk_text, btn));
+        list.appendChild(node);
+      });
+      els.body.replaceChildren(list);
+    }
+
+    function renderJson() {
+      const { request, response } = state.last;
+      const wrap = document.createElement("div");
+      wrap.className = "json-view";
+      const bar = document.createElement("div");
+      bar.className = "json-bar";
+      const method = document.createElement("span");
+      method.className = "method"; method.textContent = "POST";
+      const path = document.createElement("span");
+      path.textContent = `${apiBase()}/query`;
+      const btn = document.createElement("button");
+      btn.className = "copy-btn"; btn.type = "button";
+      btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy response</span>';
+      const responseText = JSON.stringify(response, null, 2);
+      btn.addEventListener("click", () => copy(responseText, btn));
+      bar.append(method, path, btn);
+      const reqLabel = document.createElement("div"); reqLabel.className = "json-section"; reqLabel.textContent = "Request body";
+      const reqPre = document.createElement("pre"); reqPre.textContent = JSON.stringify(request, null, 2);
+      const resLabel = document.createElement("div"); resLabel.className = "json-section"; resLabel.textContent = "Response (unmodified)";
+      const resPre = document.createElement("pre"); resPre.textContent = responseText; resPre.tabIndex = 0;
+      resPre.setAttribute("aria-label", "Raw JSON response");
+      wrap.append(bar, reqLabel, reqPre, resLabel, resPre);
+      els.body.replaceChildren(wrap);
+    }
+
+    function buildEmpty(title, text) {
+      const div = document.createElement("div");
+      div.className = "empty";
+      const h = document.createElement("h3"); h.textContent = title;
+      const p = document.createElement("p"); p.textContent = text;
+      div.append(h, p);
+      return div;
+    }
+    function renderEmpty() { els.results.hidden = true; els.body.replaceChildren(); }
+
+    function renderAlert({ tone, title, text, hint, cmd, retry }) {
+      state.last = null;
+      els.results.hidden = false;
+      els.meta.textContent = "";
+      const box = document.createElement("div");
+      box.className = `alert alert-${tone}`;
+      box.setAttribute("role", "alert");
+      box.innerHTML = `<svg class="icon" aria-hidden="true"><use href="#${tone === "warn" ? "i-db" : "i-plug"}"/></svg>`;
+      const body = document.createElement("div"); body.className = "alert-body";
+      const h = document.createElement("h3"); h.textContent = title;
+      const p = document.createElement("p"); p.textContent = text;
+      body.append(h, p);
+      if (hint) { const hp = document.createElement("p"); hp.textContent = hint; body.append(hp); }
+      if (cmd) {
+        const c = document.createElement("div"); c.className = "cmd";
+        const code = document.createElement("code"); code.textContent = cmd;
+        const b = document.createElement("button"); b.className = "copy-btn"; b.type = "button";
+        b.setAttribute("aria-label", "Copy command");
+        b.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span>';
+        b.addEventListener("click", () => copy(cmd, b));
+        c.append(code, b); body.append(c);
+      }
+      if (retry) {
+        const actions = document.createElement("div"); actions.className = "alert-actions";
+        const r = document.createElement("button"); r.className = "btn btn-secondary"; r.type = "button";
+        r.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>Try again';
+        r.addEventListener("click", search);
+        actions.append(r); body.append(actions);
+      }
+      box.append(body);
+      els.body.replaceChildren(box);
+    }
+
+    async function copy(text, btn) {
+      let ok = false;
+      try { await navigator.clipboard.writeText(text); ok = true; } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        try { ok = document.execCommand("copy"); } catch { ok = false; }
+        ta.remove();
+      }
+      const label = btn.querySelector("span");
+      const original = label ? label.textContent : "";
+      btn.dataset.copied = String(ok);
+      if (label) label.textContent = ok ? "Copied" : "Copy failed";
+      btn.querySelector("use")?.setAttribute("href", ok ? "#i-check" : "#i-copy");
+      setTimeout(() => {
+        btn.dataset.copied = "false";
+        if (label) label.textContent = original;
+        btn.querySelector("use")?.setAttribute("href", "#i-copy");
+      }, 1600);
+    }
+
+    // ---- View toggle ----
+    function setView(view) {
+      state.view = view;
+      els.viewCards.setAttribute("aria-pressed", String(view === "cards"));
+      els.viewJson.setAttribute("aria-pressed", String(view === "json"));
+      if (state.last) renderResults();
+    }
+    els.viewCards.addEventListener("click", () => setView("cards"));
+    els.viewJson.addEventListener("click", () => setView("json"));
+
+    // ---- Events ----
+    els.form.addEventListener("submit", (e) => { e.preventDefault(); search(); });
+    els.q.addEventListener("input", () => { if (!els.qError.hidden) clearFieldError(); });
+    els.k.addEventListener("input", () => { if (!els.qError.hidden) clearFieldError(); });
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => { els.q.value = chip.textContent.trim(); search(); });
+    });
+    document.addEventListener("keydown", (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || "");
+      if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); els.q.focus(); }
+    });
+    els.q.addEventListener("focus", () => { $("kbd-hint").style.visibility = "hidden"; });
+    els.q.addEventListener("blur", () => { $("kbd-hint").style.visibility = els.q.value ? "hidden" : "visible"; });
+
+    // ---- Deep link: ?q=...&k=... ----
+    const params = new URLSearchParams(location.search);
+    checkStatus();
+    if (params.get("q")) {
+      els.q.value = params.get("q");
+      const k = Number(params.get("k"));
+      if (Number.isInteger(k) && k >= 1 && k <= MAX_TOP_K) els.k.value = String(k);
+      search();
+    }
+  })();
+  </script>
+</body>
+</html>

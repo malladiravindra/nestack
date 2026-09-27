@@ -1,0 +1,16 @@
+.venv/
+venv/
+env/
+
+__pycache__/
+*.py[cod]
+
+chroma_db/
+
+.pytest_cache/
+.mypy_cache/
+
+.DS_Store
+
+# The assessment PDF is marked "Do not share or distribute this document."
+*.pdf
